@@ -3,6 +3,7 @@ import SwiftUI
 struct IslandView: View {
     @ObservedObject var player: PlayerModel
     var compact = false
+    var onExpansion: ((Bool) -> Void)?
     @State private var hovered = false
     @State private var seeking: Double?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -78,7 +79,7 @@ struct IslandView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.12), lineWidth: 1))
         .preferredColorScheme(.dark)
-        .onHover { hovered = $0 }
+        .onHover { hovered = $0; onExpansion?($0) }
         .animation(reduceMotion || player.lowPower ? nil : .easeInOut(duration: 0.2), value: hovered)
     }
 

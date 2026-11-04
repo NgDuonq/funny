@@ -61,7 +61,7 @@ final class PlayerModel: ObservableObject {
         message = "Cho phép Music Island điều khiển Spotify khi macOS hỏi."
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            Task { @MainActor [weak self] in self?.refresh() }
         }
         timer?.tolerance = 0.4
         refresh()
@@ -72,7 +72,7 @@ final class PlayerModel: ObservableObject {
         busy = true
         let request = generation
         spotify.read { [weak self] result in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 self.busy = false
                 guard self.generation == request, !self.demo else { return }
@@ -113,7 +113,7 @@ final class PlayerModel: ObservableObject {
         }
         let request = generation
         spotify.send(command) { [weak self] result in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self = self, request == self.generation else { return }
                 if case .failure(let error) = result { self.message = error.localizedDescription }
                 else { self.refresh() }
@@ -154,7 +154,7 @@ final class PlayerModel: ObservableObject {
         guard let url = url, url.scheme == "https" else { return }
         artworkTask = URLSession.shared.dataTask(with: URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 10)) { [weak self] data, _, _ in
             guard let data = data, data.count < 5_000_000 else { return }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self = self, !self.demo, self.trackID == track else { return }
                 self.artwork = NSImage(data: data)
             }

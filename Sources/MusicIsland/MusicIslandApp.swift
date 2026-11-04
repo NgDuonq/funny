@@ -28,16 +28,19 @@ final class IslandDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        let panel = IslandPanel(contentRect: NSRect(x: 0, y: 0, width: 340, height: 250),
+        let panel = IslandPanel(contentRect: NSRect(x: 0, y: 0, width: 340, height: 80),
                                 styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = true
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentView = NSHostingView(rootView:
-            VStack(spacing: 0) { IslandView(player: player, compact: true); Spacer(minLength: 0) }
-                .frame(width: 340, height: 250, alignment: .top))
+            IslandView(player: player, compact: true, onExpansion: { [weak self] _ in
+                // Wait for SwiftUI's new intrinsic size, then keep the top edge anchored.
+                DispatchQueue.main.async { [weak self] in self?.fitPanel() }
+            }).fixedSize())
         self.panel = panel
+        fitPanel()
         placePanel()
         subscription = player.$showIsland.sink { [weak self] show in
             guard let self = self else { return }
@@ -45,16 +48,16 @@ final class IslandDelegate: NSObject, NSApplicationDelegate {
             else { self.panel?.orderOut(nil) }
         }
         observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
-            object: nil, queue: .main) { [weak self] _ in Task { @MainActor in self?.placePanel() } })
+            object: nil, queue: .main) { [weak self] _ in Task { @MainActor [weak self] in self?.placePanel() } })
         let center = NSWorkspace.shared.notificationCenter
         for event in [NSWorkspace.willSleepNotification, NSWorkspace.screensDidSleepNotification] {
             workspaceObservers.append(center.addObserver(forName: event, object: nil, queue: .main) { [weak self] _ in
-                Task { @MainActor in self?.sleep(true) }
+                Task { @MainActor [weak self] in self?.sleep(true) }
             })
         }
         for event in [NSWorkspace.didWakeNotification, NSWorkspace.screensDidWakeNotification] {
             workspaceObservers.append(center.addObserver(forName: event, object: nil, queue: .main) { [weak self] _ in
-                Task { @MainActor in self?.sleep(false) }
+                Task { @MainActor [weak self] in self?.sleep(false) }
             })
         }
     }
@@ -68,6 +71,13 @@ final class IslandDelegate: NSObject, NSApplicationDelegate {
         guard let screen = NSScreen.screens.first, let panel = panel else { return }
         let top = min(screen.visibleFrame.maxY, screen.frame.maxY - screen.safeAreaInsets.top) - 8
         panel.setFrameOrigin(NSPoint(x: screen.frame.midX - panel.frame.width / 2, y: top - panel.frame.height))
+    }
+    private func fitPanel() {
+        guard let panel = panel, let content = panel.contentView else { return }
+        content.layoutSubtreeIfNeeded()
+        let size = content.fittingSize
+        if size.height > 0 { panel.setContentSize(size) }
+        placePanel()
     }
     func applicationWillTerminate(_ notification: Notification) {
         observers.forEach { NotificationCenter.default.removeObserver($0) }
