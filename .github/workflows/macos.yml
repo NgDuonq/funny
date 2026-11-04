@@ -1,0 +1,23 @@
+name: macOS build
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test lyric parser and playback clock
+        run: swift test
+      - name: Build app bundle
+        run: bash scripts/build-app.sh
+      - name: Package app
+        run: ditto -c -k --sequesterRsrc --keepParent "dist/Music Island.app" dist/MusicIsland-macOS.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MusicIsland-macOS
+          path: dist/MusicIsland-macOS.zip
