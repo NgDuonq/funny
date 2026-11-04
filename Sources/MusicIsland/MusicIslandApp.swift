@@ -25,6 +25,7 @@ final class IslandDelegate: NSObject, NSApplicationDelegate {
     private var workspaceObservers: [NSObjectProtocol] = []
     private var subscription: AnyCancellable?
     private var sleeping = false
+    private var expanded = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -35,9 +36,9 @@ final class IslandDelegate: NSObject, NSApplicationDelegate {
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentView = NSHostingView(rootView:
-            IslandView(player: player, compact: true, onExpansion: { [weak self] _ in
-                // Wait for SwiftUI's new intrinsic size, then keep the top edge anchored.
-                DispatchQueue.main.async { [weak self] in self?.fitPanel() }
+            IslandView(player: player, compact: true, onExpansion: { [weak self] value in
+                self?.expanded = value
+                self?.fitPanel()
             }).fixedSize())
         self.panel = panel
         updateScreen()
@@ -99,10 +100,11 @@ final class IslandDelegate: NSObject, NSApplicationDelegate {
         panel.setFrameOrigin(NSPoint(x: center - panel.frame.width / 2, y: screen.frame.maxY - panel.frame.height))
     }
     private func fitPanel() {
-        guard let panel = panel, let content = panel.contentView else { return }
-        content.layoutSubtreeIfNeeded()
-        let size = content.fittingSize
-        if size.height > 0 { panel.setContentSize(size) }
+        guard let panel else { return }
+        // Explicit dimensions avoid a race with SwiftUI intrinsic-size updates after hover.
+        let width = expanded ? max(400, player.notchWidth + 130) : player.notchWidth + 94
+        let height = player.notchHeight + (expanded ? 280 : 0)
+        panel.setContentSize(NSSize(width: width, height: height))
         placePanel()
     }
     func applicationWillTerminate(_ notification: Notification) {

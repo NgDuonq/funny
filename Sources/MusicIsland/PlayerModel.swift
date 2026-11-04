@@ -13,7 +13,7 @@ final class PlayerModel: ObservableObject {
     @Published var message = "Tự tìm Spotify và Apple Music đang mở."
     @Published var lyrics: [LyricLine] = []
     @Published var showIsland = true
-    @Published var lowPower = true
+    @Published var lowPower = false
     @Published var sources: [MediaSnapshot] = []
     @Published var pinned = "auto" { didSet { chooseSource() } }
     @Published var providerErrors: [String] = []
