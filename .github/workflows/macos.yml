@@ -13,11 +13,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test lyric parser and playback clock
         run: swift test
+      - name: Test web player adapters
+        run: node --test Tests/WebBridgeTests/*.test.cjs
       - name: Build app bundle
         run: bash scripts/build-app.sh
+      - name: Smoke test packaged app
+        run: '"dist/Dynamic Notch.app/Contents/MacOS/MusicIsland" --smoke-test'
+        timeout-minutes: 1
       - name: Package app
-        run: ditto -c -k --sequesterRsrc --keepParent "dist/Music Island.app" dist/MusicIsland-macOS.zip
+        run: ditto -c -k --sequesterRsrc --keepParent "dist/Dynamic Notch.app" dist/DynamicNotch-macOS.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: MusicIsland-macOS
-          path: dist/MusicIsland-macOS.zip
+          name: DynamicNotch-macOS
+          path: dist/DynamicNotch-macOS.zip

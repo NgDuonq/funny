@@ -19,3 +19,17 @@ final class IslandCoreTests: XCTestCase {
         XCTAssertEqual(PlaybackClock.position(base: -5, elapsed: 0, playing: true, duration: 30), 0)
     }
 }
+
+final class SourceSelectionTests: XCTestCase {
+    func testPlayingSourceWinsOverPausedAndSelectionStaysStable() {
+        let sources = [SourceCandidate(id: "Spotify", playing: false), SourceCandidate(id: "Music", playing: true)]
+        XCTAssertEqual(SourceSelection.choose(sources, current: "Spotify", pinned: nil), "Music")
+        let both = [SourceCandidate(id: "Spotify", playing: true), SourceCandidate(id: "Music", playing: true)]
+        XCTAssertEqual(SourceSelection.choose(both, current: "Music", pinned: nil), "Music")
+    }
+    func testPinnedSourceNeverFallsThroughToAnotherPlayer() {
+        let sources = [SourceCandidate(id: "Spotify", playing: true)]
+        XCTAssertNil(SourceSelection.choose(sources, current: "Spotify", pinned: "closed-tab"))
+        XCTAssertNil(SourceSelection.choose([], current: "Spotify", pinned: nil))
+    }
+}

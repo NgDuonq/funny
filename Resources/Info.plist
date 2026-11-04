@@ -3,13 +3,13 @@
 <plist version="1.0"><dict>
     <key>CFBundleExecutable</key><string>MusicIsland</string>
     <key>CFBundleIdentifier</key><string>dev.ngduonq.musicisland</string>
-    <key>CFBundleName</key><string>Music Island</string>
-    <key>CFBundleDisplayName</key><string>Music Island</string>
+    <key>CFBundleName</key><string>Dynamic Notch</string>
+    <key>CFBundleDisplayName</key><string>Dynamic Notch</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1.0</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>0.2.0</string>
+    <key>CFBundleVersion</key><string>2</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
-    <key>NSAppleEventsUsageDescription</key><string>Music Island reads the current Spotify track and controls playback when you press its buttons.</string>
+    <key>NSAppleEventsUsageDescription</key><string>Dynamic Notch reads track information and controls the music apps and browsers you enable.</string>
 </dict></plist>

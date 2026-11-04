@@ -7,7 +7,7 @@ let package = Package(
     products: [.executable(name: "MusicIsland", targets: ["MusicIsland"])],
     targets: [
         .target(name: "IslandCore"),
-        .executableTarget(name: "MusicIsland", dependencies: ["IslandCore"]),
+        .executableTarget(name: "MusicIsland", dependencies: ["IslandCore"], resources: [.process("Resources")]),
         .testTarget(name: "IslandCoreTests", dependencies: ["IslandCore"])
     ]
 )
