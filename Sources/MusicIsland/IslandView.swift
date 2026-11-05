@@ -3,6 +3,7 @@ import SwiftUI
 struct IslandView: View {
     @ObservedObject var player: PlayerModel
     var compact = false
+    var contentOnly = false
     var onExpansion: ((Bool) -> Void)?
     @State private var expanded = false
     @State private var collapseTask: Task<Void, Never>?
@@ -12,7 +13,7 @@ struct IslandView: View {
 
     var body: some View {
         Group {
-            if compact {
+            if contentOnly { controls } else if compact {
                 VStack(spacing: 0) {
                     notchHeader
                     if expanded {

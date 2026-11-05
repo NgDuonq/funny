@@ -1,13 +1,19 @@
 import AppKit
 import SwiftUI
 import Combine
+import IslandCore
+import QuartzCore
 
 @main
 struct MusicIslandApp: App {
     @NSApplicationDelegateAdaptor(IslandDelegate.self) private var delegate
     var body: some Scene {
         MenuBarExtra("Dynamic Notch", systemImage: "waveform") {
-            IslandView(player: delegate.player)
+            VStack {
+                Toggle("Giảm chuyển động toàn notch", isOn: Binding(get: { delegate.coordinator.settings.reduceMotion }, set: { delegate.coordinator.settings.reduceMotion = $0 }))
+                Toggle("HUD âm lượng và pin", isOn: Binding(get: { delegate.coordinator.settings.systemHUDs }, set: { delegate.coordinator.settings.systemHUDs = $0 }))
+                IslandView(player: delegate.player)
+            }.padding(8)
         }.menuBarExtraStyle(.window)
     }
 }
@@ -20,6 +26,9 @@ final class IslandPanel: NSPanel {
 @MainActor
 final class IslandDelegate: NSObject, NSApplicationDelegate {
     let player = PlayerModel()
+    let coordinator = IslandCoordinator()
+    private var systemModules: SystemModules?
+    private var stateSubscription: AnyCancellable?
     private var panel: IslandPanel?
     private var observers: [NSObjectProtocol] = []
     private var workspaceObservers: [NSObjectProtocol] = []
@@ -36,13 +45,14 @@ final class IslandDelegate: NSObject, NSApplicationDelegate {
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentView = NSHostingView(rootView:
-            IslandView(player: player, compact: true, onExpansion: { [weak self] value in
-                self?.expanded = value
-                self?.fitPanel()
-            }).fixedSize())
+            NotchShell(player: player, coordinator: coordinator, settings: coordinator.settings).fixedSize())
         self.panel = panel
         updateScreen()
         fitPanel()
+        coordinator.bindMusic(player)
+        stateSubscription = coordinator.$engine.map { $0.state }.removeDuplicates().sink { [weak self] _ in
+            DispatchQueue.main.async { [weak self] in self?.fitPanel() }
+        }
         if CommandLine.arguments.contains("--smoke-test") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
                 guard let self, let frame = self.panel?.frame,
@@ -53,7 +63,10 @@ final class IslandDelegate: NSObject, NSApplicationDelegate {
                 print("Dynamic Notch smoke test passed: panel + packaged WebPlayer.js")
                 NSApp.terminate(nil)
             }
-        } else { player.connect() }
+        } else {
+            player.connect()
+            let module = SystemModules(bus: coordinator.bus); systemModules = module; module.start()
+        }
         subscription = player.$showIsland.sink { [weak self] show in
             guard let self = self else { return }
             if show && !self.sleeping { self.panel?.orderFrontRegardless() }
@@ -74,7 +87,8 @@ final class IslandDelegate: NSObject, NSApplicationDelegate {
         }
     }
     private func sleep(_ value: Bool) {
-        sleeping = value; player.setSuspended(value)
+        sleeping = value; player.setSuspended(value); coordinator.sleep(value)
+        if value { systemModules?.stop() } else { systemModules?.start() }
         if value { panel?.orderOut(nil) }
         else if player.showIsland { placePanel(); panel?.orderFrontRegardless() }
     }
@@ -102,12 +116,26 @@ final class IslandDelegate: NSObject, NSApplicationDelegate {
     private func fitPanel() {
         guard let panel else { return }
         // Explicit dimensions avoid a race with SwiftUI intrinsic-size updates after hover.
-        let width = expanded ? max(400, player.notchWidth + 130) : player.notchWidth + 94
-        let height = player.notchHeight + (expanded ? 280 : 0)
-        panel.setContentSize(NSSize(width: width, height: height))
-        placePanel()
+        let state = coordinator.engine.state
+        let wide = state == .expanded || state == .transientHUD
+        let width = wide ? max(400, player.notchWidth + 130) : player.notchWidth + 94
+        let extra: CGFloat = state == .expanded ? 370 : state == .transientHUD ? 74 : state == .multiActivity ? 28 : 0
+        let height = player.notchHeight + extra
+        guard let screen = targetScreen else { return }
+        let center = (screen.auxiliaryTopLeftArea.map { $0.maxX } ?? screen.frame.midX)
+            + ((screen.auxiliaryTopRightArea.map { $0.minX } ?? screen.frame.midX)
+            - (screen.auxiliaryTopLeftArea.map { $0.maxX } ?? screen.frame.midX)) / 2
+        let frame = NSRect(x: center - width / 2, y: screen.frame.maxY - height, width: width, height: height)
+        if panel.isVisible && !coordinator.settings.reduceMotion && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.32
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                panel.animator().setFrame(frame, display: true)
+            }
+        } else { panel.setFrame(frame, display: true) }
     }
     func applicationWillTerminate(_ notification: Notification) {
+        systemModules?.stop()
         observers.forEach { NotificationCenter.default.removeObserver($0) }
         workspaceObservers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
     }

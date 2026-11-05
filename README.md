@@ -1,5 +1,9 @@
 # funny · Dynamic Notch
 
+**0.3 — Dynamic Core preview:** event priorities, transient Volume/Battery HUDs, concurrent music + timer, hover/click-to-pin and smoother transitions. This implements the first staged milestone, not the entire Real Dynamic Notch roadmap. See [ROADMAP.md](ROADMAP.md) for exact status and limitations.
+
+Timer: hover notch → 5 or 25 minutes; pause/resume/cancel in expanded view. The 25-minute preset is a timer, not a full Pomodoro cycle. Menu bar toggles system HUDs and global Reduce Motion. Volume HUD requires an output device exposing a Core Audio master volume property. Battery HUD uses internal-battery notifications. System HUDs do not replace or suppress Apple’s own HUDs.
+
 Native macOS music companion built with SwiftUI + AppKit. **Preview 0.2** attaches to the top edge of the screen and leaves the physical camera housing empty, with artwork on its left and a playback button on its right. Hover to expand into a player; leave to collapse. No third-party Swift dependencies.
 
 ## Cập nhật từ Music Island 0.1

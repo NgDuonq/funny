@@ -33,3 +33,35 @@ final class SourceSelectionTests: XCTestCase {
         XCTAssertNil(SourceSelection.choose([], current: "Spotify", pinned: nil))
     }
 }
+
+final class IslandEngineTests: XCTestCase {
+    func testTransientRestoresActivitiesAndDoesNotLoseExpandedState() {
+        let now = Date(timeIntervalSince1970: 100)
+        var engine = IslandEngine()
+        engine.post(IslandEvent(id: "music", title: "Song", symbol: "music.note", priority: 10))
+        engine.post(IslandEvent(id: "timer", title: "Timer", symbol: "timer", priority: 20))
+        XCTAssertEqual(engine.state, .multiActivity)
+        engine.post(IslandEvent(id: "volume", title: "50%", symbol: "speaker", priority: 30, expiresAt: now.addingTimeInterval(2)))
+        XCTAssertEqual(engine.state, .transientHUD)
+        engine.userExpanded = true
+        XCTAssertEqual(engine.state, .expanded)
+        engine.expire(at: now.addingTimeInterval(3))
+        XCTAssertEqual(engine.state, .expanded)
+        engine.userExpanded = false
+        XCTAssertEqual(engine.state, .multiActivity)
+        XCTAssertEqual(engine.activities.count, 2)
+    }
+    func testCoalescingExtendsTTLAndPriorityIsStable() {
+        let now = Date(timeIntervalSince1970: 100)
+        var engine = IslandEngine()
+        engine.post(IslandEvent(id: "volume", title: "10%", symbol: "speaker", priority: 30, expiresAt: now))
+        engine.post(IslandEvent(id: "volume", title: "50%", symbol: "speaker", priority: 30, expiresAt: now.addingTimeInterval(4)))
+        engine.post(IslandEvent(id: "battery", title: "Low", symbol: "battery", priority: 70, expiresAt: now.addingTimeInterval(2)))
+        XCTAssertEqual(engine.events.count, 2)
+        XCTAssertEqual(engine.transient?.id, "battery")
+        engine.expire(at: now.addingTimeInterval(3))
+        XCTAssertEqual(engine.transient?.title, "50%")
+        engine.expire(at: now.addingTimeInterval(5))
+        XCTAssertEqual(engine.state, .idle)
+    }
+}
